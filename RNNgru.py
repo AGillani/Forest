@@ -1,3 +1,20 @@
+"""
+Training a Recurrent Neural Network (RNN) on the MNIST training data of handwritten units incorporating the usage
+of Gated Recurrent Unit (GRU)
+
+Code inspired from Aymeric Damien's github repository:
+https://github.com/aymericdamien/TensorFlow-Examples/blob/master/examples/3_NeuralNetworks/recurrent_network.py
+
+SOME CHANGES MADE BY ME:
+1) Used GRU instead of LSTM
+2) Used Adam Optimizer instead of Gradient Descent Optimizer
+3) Due to above change, number of training steps was decreased from 10,000 t0 1400
+
+Original code: Training accuracy: 88.3%, Test accuracy: 89.8% (10,000 training steps)
+Modified code(below): Training accuracy:99.2%, Test accuracy: 100% (1400 training steps)
+"""
+
+
 from __future__ import print_function
 
 import tensorflow as tf
