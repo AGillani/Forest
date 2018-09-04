@@ -10,32 +10,33 @@ in the dataset convertcsv.csv. The values are taken every 16 days.
 """
 
 
+from __future__ import print_function # because I still use python 2.7!
+from __future__ import division
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas
-from DataPrep import pre_data
-from Smooth import smooth
+from DataPrep import *
+
 
 tf.set_random_seed(seed=2018)
 np.random.seed(seed=2018)
 
-
 # parameters
 batch_size = 32
-seq_len = 212  # sequence length
+seq_len = 140  # sequence length, is the input length to be fed into the model
 n_hidd_layers = 3  # number of hidden layers # (can be 3)
-n_neurons = 8
+n_neurons = 10
 lr = 0.01  # learning rate
 n_iters = 1200  # number of iterations
 lambda_l2_reg = 0.001  # L2 regularization of weights
 
-
 # preparing the data
-X_batch, Y_batch = pre_data(file_path="convertcsv.csv", batch_size=batch_size, seq_len=seq_len)
+(X_batch, Y_batch), test_set = train_test_data(file_path="convertcsv.csv", batch_size=batch_size,
+                                               input_length=seq_len, test_percent=0.33)
 inp_dim = X_batch.shape[2]
 out_dim = X_batch.shape[2]
 
+########################################### graph definitions in here ###################################
 # reset tensorflow graph
 tf.reset_default_graph()
 
@@ -87,6 +88,9 @@ with tf.variable_scope('Optimizer'):
     optimizer = tf.train.AdamOptimizer(lr)
     train_op = optimizer.minimize(loss)
 
+############################################### graph definitions complete ###################################
+
+############################################## Train in here ###############################################
 print('log: all parameters defined. Beginning training now...')
 # print(tf.default_graph())
 # initialize the variables
@@ -106,10 +110,11 @@ for iteration in range(n_iters):
     if iteration % 100 == 0:
         print('Iter: {} Train Loss: {}'.format(iteration, loss_train))
 
-loss_test = sess.run(loss, feed_dict)
-print('Test Loss: {}'.format(loss_test))
+# we have already trained here, so we can't see it's test loss!
+# loss_test = sess.run(loss, feed_dict)
+# print('Test Loss: {}'.format(loss_test))
 
-# Plot loss over time:
+# Plot log "train" loss over time:
 plt.figure(figsize=(15, 5))
 # plt.plot(train_losses, label='Train Loss')
 plt.plot(np.log(train_losses), label='Train Loss')
@@ -119,31 +124,86 @@ plt.ylabel('log(Loss)')
 plt.legend(loc='upper right')
 plt.show()
 
-# predict
-n_pred = 5 # number of predictions
-X_batch, Y_batch = pre_data(file_path="convertcsv.csv", batch_size=n_pred, seq_len=seq_len)
+############################################## Training complete ###############################################
+
+############################################## Testing now #################################################
+# For testing, we shall feed in the entire train set, and we would ask the model to predict the following values,
+# which in our case, we can compare with the test set, because they are the values that follow the train set
+# n_pred = 5 # number of predictions to be made
+# X_batch, Y_batch = pre_data(file_path="convertcsv.csv", batch_size=n_pred, seq_len=seq_len)
+# feed_dict = {enc_inp[t]: X_batch[t] for t in range(seq_len)}
+# output = sess.run(reshaped_dec_out, feed_dict)
+# output = np.array(output)
+#
+# print(output)
+# plt.figure(figsize=(15, n_pred))
+# for j in range(out_dim):
+#     for i in range(n_pred):
+#         past = X_batch[:, i, j]
+#         exp = Y_batch[:, i, j]
+#         pred = output[:, i, j]
+#         label_past = 'Past (True) Values' if j == 0 else '_nolegend_'
+#         label_exp = 'Expected (True) Values' if j == 0 else '_nolegend_'
+#         label_pred = 'Predicted Values' if j == 0 else '_nolegend_'
+#         plt.plot(range(len(past)), past, 'o--b', label=label_past)
+#         plt.plot(range(len(past), len(past) + len(exp)), exp, 'x--b', label=label_exp)
+#         plt.plot(range(len(past), len(past) + len(pred)), pred, 'o--r', label=label_pred)
+#     plt.title('Predicted Values vs True Values')
+#     plt.legend(loc='lower right')
+# plt.show()
+
+# get the prediction result on the training set (for plotting only)
 feed_dict = {enc_inp[t]: X_batch[t] for t in range(seq_len)}
+training_result = sess.run(reshaped_dec_out, feed_dict)
+training_result = np.array(training_result)
+
+# get the prediction for test set
+n_pred = len(test_set) # number of predictions to be made
+feed_dict = {enc_inp[t]: Y_batch[t] for t in range(seq_len)} # Why Y_batch you ask?
 output = sess.run(reshaped_dec_out, feed_dict)
 output = np.array(output)
 
-print(output)
+# get the "real" loss on the test set
+# feed_dict = {enc_inp[t]: output[t] for t in range(seq_len)}
+feed_dict.update({dec_exp_out[t]: output[t] for t in range(seq_len)})
+# we have already trained here, so we can't see it's test loss!
+loss_test = sess.run(loss, feed_dict)
+print('------> Test Loss: {}'.format(loss_test))
+
+# these are to be plotted
+print(X_batch.shape, Y_batch.shape, output.shape)
+training_inputs = X_batch[:,0,0] # oh because all the batches are the same in our case ;)
+training_labels = Y_batch[:,0,0]
+training_predictions = training_result[:,0,0]
+test_outputs = test_set[:,0,0]
+test_predictions = output[:,0,0]
+# print(output)
+
 plt.figure(figsize=(15, n_pred))
-for j in range(out_dim):
-    for i in range(n_pred):
-        past = X_batch[:, i, j]
-        exp = Y_batch[:, i, j]
-        pred = output[:, i, j]
-        label_past = 'Past (True) Values' if j == 0 else '_nolegend_'
-        label_exp = 'Expected (True) Values' if j == 0 else '_nolegend_'
-        label_pred = 'Predicted Values' if j == 0 else '_nolegend_'
-        plt.plot(range(len(past)), past, 'o--b', label=label_past)
-        plt.plot(range(len(past), len(past) + len(exp)), exp, 'x--b', label=label_exp)
-        plt.plot(range(len(past), len(past) + len(pred)), pred, 'o--r', label=label_pred)
-    plt.title('Predicted Values vs True Values')
-    plt.legend(loc='lower right')
+training_in = training_inputs
+training_labels = training_labels
+test_outputs = test_outputs
+pred = test_predictions
+print(map(len, (training_in, training_labels, test_outputs, pred)))
+training_in_l = 'Training inputs'
+training_labels_l = 'Training labels (Test inputs)'
+training_pred_l = 'Training predictions'
+test_labels_l = 'Test labels'
+test_pred_l = 'Test predictions'
+plt.plot(range(len(training_in)), training_in, 'o--b', label=training_in_l)
+plt.plot(range(len(training_in), len(training_in) + len(training_labels)),
+         training_labels, 'x--b', label=training_labels_l)
+plt.plot(range(len(training_in), len(training_in) + len(training_predictions)),
+         training_predictions, 'x--y', label=training_pred_l)
+plt.plot(range(len(training_in)+len(training_labels), len(training_in)+len(training_labels)+len(test_outputs)),
+         test_outputs, 'x--g', label=test_labels_l)
+plt.plot(range(len(training_in)+len(training_labels), len(training_in)+len(training_labels)+len(pred)),
+         pred, 'o--r', label=test_pred_l)
+plt.title('Predicted Values vs True Values')
+plt.legend(loc='lower right')
 plt.show()
 
-
+############################################## testing complete #################################################
 
 
 

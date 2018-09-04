@@ -81,13 +81,16 @@ def train_test_data(file_path, batch_size, input_length, test_percent=0.2):
 
     TEST = np.array([df_test])  # size: [out_dim, seq_len]
     TEST = TEST.T  # size: [seq_len, out_dim]
+    TEST = TEST.reshape(1, TEST.shape[0], 1)  # size: [batch_size=1, seq_len=(test-set-length), out_dim=1]
 
     X_batch = np.array(X_batch)  # size: [batch_size, seq_len, out_dim]
     Y_batch = np.array(Y_batch)
     print("X batch", X_batch.shape)
     print("Y batch", Y_batch.shape)
+    print("TEST data", TEST.shape)
     X_batch = np.transpose(X_batch, (1, 0, 2))  # size: [seq_len, batch_size, out_dim]
     Y_batch = np.transpose(Y_batch, (1, 0, 2))
+    TEST = np.transpose(TEST, (1, 0, 2))
     return (X_batch, Y_batch), TEST
 
 
