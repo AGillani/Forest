@@ -126,6 +126,7 @@ feed_dict = {enc_inp[t]: X_batch[t] for t in range(seq_len)}
 output = sess.run(reshaped_dec_out, feed_dict)
 output = np.array(output)
 
+print(output)
 plt.figure(figsize=(15, n_pred))
 for j in range(out_dim):
     for i in range(n_pred):
